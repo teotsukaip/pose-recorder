@@ -331,7 +331,7 @@ async function analyseVideo(blob) {
   try { await tempVideo.play(); tempVideo.pause(); } catch(e) { console.warn("play/pause:", e); }
 
   const duration = tempVideo.duration;
-  const fps = 10;
+  const fps = 15;
   const interval = 1 / fps;
   const totalFrames = Math.floor(duration * fps);
   poseData = [];
