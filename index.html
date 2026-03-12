@@ -33,8 +33,11 @@
   .hidden { display: none !important; }
   #controls {
     padding: 12px; display: flex; gap: 10px;
-    justify-content: center; flex-shrink: 0;
+    justify-content: center; align-items: center; flex-shrink: 0;
     background: #222;
+  }
+  .version-label {
+    font-size: 0.65rem; color: #888; margin-left: 4px; flex-shrink: 0;
   }
   .btn {
     flex: 1; max-width: 200px;
@@ -44,7 +47,8 @@
     color: #fff;
   }
   .btn:active { opacity: .7; }
-  .btn-record { background: #e53935; }
+  .btn-record { background: #ef9a9a; }
+  .btn-record-start { background: #e53935; }
   .btn-stop   { background: #1e88e5; }
   .btn-clear  { background: #757575; }
   #status-overlay {
@@ -217,8 +221,12 @@ function hideStatus() { statusOverlay.classList.add("hidden"); }
 
 function renderControls() {
   controlsDiv.innerHTML = "";
-  if (currentState === STATE.IDLE) controlsDiv.appendChild(makeBtn("\u9332\u753b", "btn-record", startCamera));
-  else if (currentState === STATE.CAMERA) controlsDiv.appendChild(makeBtn("\u25cf \u9332\u753b\u958b\u59cb", "btn-record", startRecording));
+  if (currentState === STATE.IDLE) {
+    controlsDiv.appendChild(makeBtn("\u9332\u753b\u6e96\u5099", "btn-record", startCamera));
+    var ver = document.createElement("span"); ver.className = "version-label"; ver.textContent = "ver.1.00";
+    controlsDiv.appendChild(ver);
+  }
+  else if (currentState === STATE.CAMERA) controlsDiv.appendChild(makeBtn("\u25cf \u9332\u753b\u958b\u59cb", "btn-record-start", startRecording));
   else if (currentState === STATE.RECORDING) controlsDiv.appendChild(makeBtn("\u25a0 \u7d42\u4e86", "btn-stop", stopRecording));
   else if (currentState === STATE.PLAYBACK) controlsDiv.appendChild(makeBtn("\u30af\u30ea\u30a2", "btn-clear", clearAll));
 }
@@ -331,7 +339,7 @@ async function analyseVideo(blob) {
   try { await tempVideo.play(); tempVideo.pause(); } catch(e) { console.warn("play/pause:", e); }
 
   const duration = tempVideo.duration;
-  const fps = 15;
+  const fps = 30;
   const interval = 1 / fps;
   const totalFrames = Math.floor(duration * fps);
   poseData = [];
@@ -468,17 +476,10 @@ async function clearAll() {
 
 /* Init */
 async function init() {
-  const savedBlob = await dbGet("videos", "latest").catch(function() { return null; });
-  const savedPose = await dbGet("posedata", "latest").catch(function() { return null; });
-  if (savedBlob && savedPose && savedPose.length > 0) {
-    poseData = savedPose;
-    const detected = savedPose.filter(function(f) { return f.landmarks !== null; }).length;
-    debugInfo.textContent = detected + "/" + savedPose.length + " frames (cached)";
-    startPlayback(savedBlob);
-  } else {
-    currentState = STATE.IDLE;
-    renderControls();
-  }
+  /* Always start fresh on reload */
+  await dbClearAll().catch(function() {});
+  currentState = STATE.IDLE;
+  renderControls();
 }
 init();
 </script>
