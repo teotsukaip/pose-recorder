@@ -294,17 +294,20 @@ function cloneLandmarks(landmarks) {
   });
 }
 
-/* Wait helpers */
-function waitForSeek(video) {
-  return new Promise(function(resolve) { video.onseeked = function() { resolve(); }; });
-}
-function waitForFrame(video) {
+/* Seek helper - attach listener BEFORE setting currentTime, with safety timeout */
+function seekTo(video, time) {
   return new Promise(function(resolve) {
-    if (typeof video.requestVideoFrameCallback === "function") {
-      video.requestVideoFrameCallback(function() { resolve(); });
-    } else {
-      setTimeout(resolve, 60);
+    var done = false;
+    var timer = setTimeout(function() { if (!done) { done = true; resolve(); } }, 2000);
+    function onSeeked() {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      video.removeEventListener("seeked", onSeeked);
+      setTimeout(resolve, 30);
     }
+    video.addEventListener("seeked", onSeeked);
+    video.currentTime = time;
   });
 }
 
@@ -335,9 +338,7 @@ async function analyseVideo(blob) {
 
   for (let i = 0; i <= totalFrames; i++) {
     const time = Math.min(i * interval, duration - 0.01);
-    tempVideo.currentTime = time;
-    await waitForSeek(tempVideo);
-    await waitForFrame(tempVideo);
+    await seekTo(tempVideo, time);
 
     let ts = Math.round(time * 1000);
     if (ts <= lastTs) ts = lastTs + 1;
@@ -359,6 +360,8 @@ async function analyseVideo(blob) {
     const pct = Math.round(((i + 1) / (totalFrames + 1)) * 100);
     statusText.textContent = "\u30dd\u30fc\u30ba\u89e3\u6790\u4e2d... " + pct + "%";
     setProgress(pct);
+    /* yield to UI thread so progress bar updates */
+    if (i % 3 === 0) await new Promise(function(r) { setTimeout(r, 0); });
   }
 
   URL.revokeObjectURL(url);
