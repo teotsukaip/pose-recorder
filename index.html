@@ -313,6 +313,8 @@ function seekTo(video, time) {
 
 /* Analyse */
 async function analyseVideo(blob) {
+  /* Always create a fresh PoseLandmarker so timestamps start clean */
+  if (poseLandmarker) { poseLandmarker.close(); poseLandmarker = null; }
   await ensurePoseLandmarker();
   showStatus("\u30dd\u30fc\u30ba\u89e3\u6790\u4e2d... 0%", true);
 
@@ -455,6 +457,7 @@ async function clearAll() {
   playbackVideo.classList.add("hidden");
   overlayCanvas.classList.add("hidden");
   poseData = [];
+  if (poseLandmarker) { poseLandmarker.close(); poseLandmarker = null; }
   debugInfo.textContent = "";
   showStatus("\u30c7\u30fc\u30bf\u3092\u524a\u9664\u4e2d...");
   await dbClearAll();
