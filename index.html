@@ -41,6 +41,16 @@
     position: absolute; right: 12px;
     font-size: 0.65rem; color: #888;
   }
+  .fps-select {
+    position: absolute; left: 12px;
+    font-size: 0.85rem; padding: 6px 4px;
+    background: #333; color: #fff; border: 1px solid #555;
+    border-radius: 6px;
+  }
+  .fps-label {
+    position: absolute; right: 12px;
+    font-size: 10px; color: #888;
+  }
   .btn {
     flex: 1; max-width: 200px;
     padding: 16px 0; border: none; border-radius: 12px;
@@ -141,6 +151,7 @@ const ctx = overlayCanvas.getContext("2d");
 
 let mediaStream = null, mediaRecorder = null, recordedChunks = [];
 let poseData = [], poseLandmarker = null, animFrameId = null;
+let selectedFps = 10;
 
 /* IndexedDB */
 function openDB() {
@@ -224,13 +235,33 @@ function hideStatus() { statusOverlay.classList.add("hidden"); }
 function renderControls() {
   controlsDiv.innerHTML = "";
   if (currentState === STATE.IDLE) {
+    var sel = document.createElement("select"); sel.className = "fps-select";
+    [10, 15, 20, 30].forEach(function(v) {
+      var opt = document.createElement("option"); opt.value = v; opt.textContent = v + "fps";
+      if (v === selectedFps) opt.selected = true;
+      sel.appendChild(opt);
+    });
+    sel.addEventListener("change", function() { selectedFps = parseInt(sel.value); });
+    controlsDiv.appendChild(sel);
     controlsDiv.appendChild(makeBtn("\u9332\u753b\u6e96\u5099", "btn-record", startCamera));
-    var ver = document.createElement("span"); ver.className = "version-label"; ver.textContent = "ver1.01";
+    var ver = document.createElement("span"); ver.className = "version-label"; ver.textContent = "ver1.02";
     controlsDiv.appendChild(ver);
   }
-  else if (currentState === STATE.CAMERA) controlsDiv.appendChild(makeBtn("\u25cf \u9332\u753b\u958b\u59cb", "btn-record-start", startRecording));
-  else if (currentState === STATE.RECORDING) controlsDiv.appendChild(makeBtn("\u25a0 \u7d42\u4e86", "btn-stop", stopRecording));
-  else if (currentState === STATE.PLAYBACK) controlsDiv.appendChild(makeBtn("\u30af\u30ea\u30a2", "btn-clear", clearAll));
+  else if (currentState === STATE.CAMERA) {
+    controlsDiv.appendChild(makeBtn("\u25cf \u9332\u753b\u958b\u59cb", "btn-record-start", startRecording));
+    var fl = document.createElement("span"); fl.className = "fps-label"; fl.textContent = selectedFps + "fps";
+    controlsDiv.appendChild(fl);
+  }
+  else if (currentState === STATE.RECORDING) {
+    controlsDiv.appendChild(makeBtn("\u25a0 \u7d42\u4e86", "btn-stop", stopRecording));
+    var fl = document.createElement("span"); fl.className = "fps-label"; fl.textContent = selectedFps + "fps";
+    controlsDiv.appendChild(fl);
+  }
+  else if (currentState === STATE.PLAYBACK) {
+    controlsDiv.appendChild(makeBtn("\u30af\u30ea\u30a2", "btn-clear", clearAll));
+    var fl = document.createElement("span"); fl.className = "fps-label"; fl.textContent = selectedFps + "fps";
+    controlsDiv.appendChild(fl);
+  }
 }
 function makeBtn(label, cls, handler) {
   const b = document.createElement("button");
@@ -341,7 +372,7 @@ async function analyseVideo(blob) {
   try { await tempVideo.play(); tempVideo.pause(); } catch(e) { console.warn("play/pause:", e); }
 
   const duration = tempVideo.duration;
-  const fps = 30;
+  const fps = selectedFps;
   const interval = 1 / fps;
   const totalFrames = Math.floor(duration * fps);
   poseData = [];
